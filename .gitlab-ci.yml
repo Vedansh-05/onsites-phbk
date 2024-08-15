@@ -1,0 +1,56 @@
+stages:
+  - build
+  - deploy  
+
+variables:
+  REGISTRY: 'Vedansh-05'
+
+before_script:
+  - echo "Setting up environment"
+  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+
+build_user:
+  stage: build
+  script:
+    - docker build -f user-1/Dockerfile ./user-1
+    - docker $REGISTRY/user:latest
+  only:
+    - main
+
+build_number:
+  stage: build
+  script:
+    - docker build -f number/Dockerfile ./number
+    - docker $REGISTRY/number:latest
+  only:
+    - main
+
+
+deploy:
+  stage: deploy
+  script:
+    - docker push $REGISTRY/user:latest
+    - docker push $REGISTRY/number:latest
+  only:
+    - main 
+
+load_test:
+  stage: load_test
+  image: maven:3.6.3-jdk-11 
+  before_script:
+    - apt-get update && apt-get install -y openjdk-11-jdk wget
+    - wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.5.tgz
+    - tar -xzf apache-jmeter-5.5.tgz
+    - export JMETER_HOME=$(pwd)/apache-jmeter-5.5
+    - export PATH=$JMETER_HOME/bin:$PATH
+  script:
+    - jmeter -n -t ./test-plan.jmx -l ./results.jtl
+  artifacts:
+    paths:
+      - ./results.jtl
+    reports:
+      junit:
+        - ./results.jtl
+    expire_in: "10 days"
+  only:
+    - main
