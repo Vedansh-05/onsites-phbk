@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  number:
+    build:
+      context: ./number
+    ports:
+      - "5000:5000"
+    environment:
+      - MYSQL_HOST=main-db
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=1234
+      - MYSQL_DB=number-db
+    depends_on:
+      - main-db
+
+  user-1:
+    build:
+      context: ./user-1
+    ports:
+      - "5001:5001"
+    environment:
+      - MYSQL_HOST=main-db
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=1234
+      - MYSQL_DB=user-db
+    depends_on:
+      - main-db
+  
+  user-2:
+    build:
+      context: ./user-2
+    ports:
+      - "5002:5002"
+    environment:
+      - MYSQL_HOST=main-db
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=1234
+      - MYSQL_DB=user-db
+    depends_on:
+      - main-db
+    
+  nginx:
+    build: ./nginx
+    
+    ports:
+      - "3000:80"
+    depends_on:
+      - user-1
+      - user-2
+      - number
+
+  main-db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=1234
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 4s
+      timeout: 4s
+      retries: 5 
+
+volumes:
+  mysql_data:
